@@ -1,4 +1,6 @@
 # DomainWarping-Houdini-HeightField
+![](https://i.gyazo.com/880fbdafd81e7784cbae18e217d93579.png "")
+
 ```
 vector fbm(vector pos; float time) {
     vector p = pos;
@@ -25,5 +27,3 @@ vector domainWarping(vector pos; float time) {
 
 @density = domainWarping(@P / 1000, @Time) * 100.;
 ```
-
-![](https://i.gyazo.com/880fbdafd81e7784cbae18e217d93579.png "")
