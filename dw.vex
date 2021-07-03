@@ -1,26 +1,45 @@
-vector fbm(vector pos; float time) {
-    vector p = pos;
-    vector v = set(0., 0., 0.);
+function vector fbm(vector p; vector shift; float shiftSpeed; float rad) {
+    // vector pos = set(p.x, p.y, p.z);
+    vector4 pos = set(p.x, p.y, p.z, shiftSpeed);
+    vector v = set(0);
     float a = 0.5;
-    float speed = time * 0.003;
-    vector shift = set(100 * cos(speed), 100 * sin(speed));
-    matrix rot = ident();
-    vector axis = {0, 1, 0};
-    rotate(rot, 0.7, axis);
-    
+    matrix mat = ident();
+    float radius = rad;
+
     int octave = 7;
-    for(int i = 0; i < octave; i++)
-    {
-        v += onoise(p)* a;        
-        p = rot * p * 2.0 + shift;
+    for (int i = 0; i < octave; ++i) {
+        v += a * noise(pos * 0.5);
+
+        rotate(mat, radius, normalize(v));
+
+        pos = mat * pos * 2.0 + shift;
         a *= .5;
     }
-    
-    return v; 
+    return v;
 }
 
-vector domainWarping(vector pos; float time) {
-    return fbm(pos + fbm(pos + fbm(pos, time), time), time) ;
+vector gumbelNoise(vector vec) {
+    return -log(-log(vec));
 }
 
-@density = domainWarping(@P / 1000, @Time) * 100.;
+function vector domainWarping(vector p; float time) {
+    vector4 pos = p;
+
+    vector4 fbm1 = fbm(pos, set(.1, .1, .1), 0.1 * time, 0.5);
+
+    vector4 fbm2 = gumbelNoise(fbm(
+            fbm1 + pos,
+            fbm1 * 0.59,
+            0.1 * time,
+            fbm1.x * 0.01)
+        );
+
+    vector4 fbm3 = gumbelNoise(fbm(
+            fbm2 + pos,
+            fbm2 * 0.58,
+            0.12 * time,
+            fbm2.x * 0.02)
+        );
+
+    return fbm3;
+}
