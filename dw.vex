@@ -1,19 +1,21 @@
-function vector fbm(vector p; vector shift; float shiftSpeed; float rad) {
-    // vector pos = set(p.x, p.y, p.z);
-    vector4 pos = set(p.x, p.y, p.z, shiftSpeed);
+function vector fbm(vector p; vector shift; float time; float rad) {
+    vector4 pos = set(p.x, p.y, p.z, time);
     vector v = set(0);
     float a = 0.5;
     matrix mat = ident();
     float radius = rad;
 
-    int octave = 7;
+    int octave = chi("Octave");
     for (int i = 0; i < octave; ++i) {
         v += a * noise(pos * 0.5);
 
         rotate(mat, radius, normalize(v));
 
         pos = mat * pos * 2.0 + shift;
-        a *= .5;
+        pos.w = time * .9;
+
+        a *= .55;
+        radius *= .8;
     }
     return v;
 }
@@ -23,22 +25,27 @@ vector gumbelNoise(vector vec) {
 }
 
 function vector domainWarping(vector p; float time) {
-    vector4 pos = p;
+    vector pos = p;
 
-    vector4 fbm1 = fbm(pos, set(.1, .1, .1), 0.1 * time, 0.5);
+    vector fbm1 = fbm(
+                pos,
+                set(1, 1, 1) * chf("fbm1_Shift_Scale"),
+                time * chf("fbm1_Time_Scale"),
+                chf("fbm1_Radius_Scale")
+            );
 
-    vector4 fbm2 = gumbelNoise(fbm(
+    vector fbm2 = gumbelNoise(fbm(
             fbm1 + pos,
-            fbm1 * 0.59,
-            0.1 * time,
-            fbm1.x * 0.01)
+            fbm1 * chf("fbm2_Shift_Scale"),
+            time * chf("fbm2_Time_Scale"),
+            fbm1.x * chf("fbm2_Radius_Scale"))
         );
 
-    vector4 fbm3 = gumbelNoise(fbm(
+    vector fbm3 = gumbelNoise(fbm(
             fbm2 + pos,
-            fbm2 * 0.58,
-            0.12 * time,
-            fbm2.x * 0.02)
+            fbm2 * chf("fbm3_Shift_Scale"),
+            time * chf("fbm3_Time_Scale"),
+            fbm2.x * chf("fbm3_Radius_Scale"))
         );
 
     return fbm3;
