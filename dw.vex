@@ -86,8 +86,7 @@ function vector sampling(int fbmId; vector v) {
 function vector fbm(int octave;
                     int noiseId;
                     vector p;
-                    float sft; float shiftScale;
-                    float radiusSccale;
+                    float sft;
                     float t;
                     float flow) {
     vector pos = p;
@@ -105,10 +104,10 @@ function vector fbm(int octave;
 
         pos = mat * pos * shift;
 
-        radius +=  radiusSccale;
-        time += .1;
-        shift += shiftScale;
-        a *= .5;
+        radius += 0.125;
+        time -= 0.25;
+        shift += 0.25;
+        a *= 0.5;
     }
 
     return v;
@@ -122,9 +121,7 @@ function vector domainWarping(vector p; float time) {
             chi("fbm1_NoiseID"),
             pos,
             chf("fbm1_Shift"),
-            chf("fbm1_Shift_Scale"),
-            chf("fbm1_Radius_Scale"),
-            time * chf("fbm1_Time_Scale"),
+            time,
             chf("fbm1_FlowNoise_Flow")
         );
 
@@ -137,9 +134,7 @@ function vector domainWarping(vector p; float time) {
             chi("fbm2_NoiseID"),
             pos + fbm1,
             chf("fbm2_Shift"),
-            chf("fbm2_Shift_Scale"),
-            chf("fbm2_Radius_Scale"),
-            time * chf("fbm2_Time_Scale"),
+            time,
             chf("fbm2_FlowNoise_Flow")
         );
 
@@ -151,9 +146,7 @@ function vector domainWarping(vector p; float time) {
             chi("fbm3_NoiseID"),
             pos + fbm2,
             chf("fbm3_Shift"),
-            chf("fbm3_Shift_Scale"),
-            chf("fbm3_Radius_Scale"),
-            time * chf("fbm3_Time_Scale"),
+            time,
             chf("fbm3_FlowNoise_Flow")
         );
 
