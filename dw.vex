@@ -9,33 +9,41 @@ function vector selectedNoise(int noiseId; vector pos; float time; float flow) {
         CurlNoise = 6,              // curlnoise
         ArigatorNoise = 7;          // anoise
 
-    if(Random == noiseId) // 0 ~ 1
+    if(Random == noiseId) {// 0 ~ 1
         return random(set(pos.x, pos.y, pos.z, time));
+    }
 
-    if(PerlinNoise == noiseId) // 0 ~ 1
+    if(PerlinNoise == noiseId) { // 0 ~ 1
         return noise(set(pos.x, pos.y, pos.z, time));
+    }
 
-    if(OriginalPerlinNoise == noiseId) // -1 ~ 1
+    if(OriginalPerlinNoise == noiseId) { // -1 ~ 1
         return onoise(pos);
+    }
 
-    if(SimplexNoise == noiseId) // 0 ~ 1
+    if(SimplexNoise == noiseId) { // 0 ~ 1
         return xnoise(set(pos.x, pos.y, pos.z, time));
+    }
 
-    if(SparseConvolutionNoise == noiseId) // -1.7 ~ 1.7
+    if(SparseConvolutionNoise == noiseId) { // -1.7 ~ 1.7
         return snoise(pos);
+    }
 
-    if(FlowNoise == noiseId) // 0 ~ 1 (0.2 ~ 0.8), args(p, flow(0 ~ 1))
+    if(FlowNoise == noiseId) { // 0 ~ 1 (0.2 ~ 0.8), args(p, flow(0 ~ 1))
         return flownoise(set(pos.x, pos.y, pos.z, time), flow);
+    }
 
-    if(CurlNoise == noiseId) // -1 ~ 1.02
+    if(CurlNoise == noiseId) { // -1 ~ 1.02
         return curlnoise(set(pos.x, pos.y, pos.z, time));
+    }
 
-    if(ArigatorNoise == noiseId) // anoise 0 ~ 1
+    if(ArigatorNoise == noiseId) { // anoise 0 ~ 1
         return anoise(
                 pos
             );
+    }
 
-    return {0};
+    error("Error: selected");
 }
 
 function vector fitTo01(int noiseId; vector vec) {
@@ -55,10 +63,10 @@ function vector fitTo01(int noiseId; vector vec) {
     if(CurlNoise == noiseId)
         return fit(vec, {-1, -1, -1}, {1.02, 1.02, 1.02}, {0,0,0}, {1,1,1});
 
-    return vec;// 0 ~ 1
+    return vec; // 0 ~ 1
 }
 
-function vector sampling(int fbmId; vector v; float time) {
+function vector sampling(int fbmId; vector v) {
     int None = 0,
         Normal = 1,
         Cauchy = 2,
@@ -73,21 +81,34 @@ function vector sampling(int fbmId; vector v; float time) {
     }
     
     if (samplingId == Cauchy) {
-        vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
-        return sample_cauchy(vec);
+        return sample_cauchy(v);// -1 ~ 0 ~ 1
     }
     
     if (samplingId == Sphere_Uniform) {
-        vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
-        return sample_sphere_uniform(vec);
+        return sample_sphere_uniform(v);
     }
     
     if (samplingId == Orientation_Uniform) {
         vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
-        return sample_orientation_uniform(v);
+        return sample_orientation_uniform(vec);
     }
 
     error("ERROR: Sampling");
+}
+
+function vector fitTo11(int noiseId, samplingId; vector v) {
+    int notSelectedSamplingId = 0;
+    if(samplingId == notSelectedSamplingId) {
+        int OriginalPerlinNoise = 2,    // onoise
+            SparseConvolutionNoise = 4, // snoise
+            CurlNoise = 6;              // curlnoise
+
+        if((OriginalPerlinNoise != noiseId) && 
+                (SparseConvolutionNoise != noiseId) &&
+                (CurlNoise != noiseId)) {
+            return fit01(v, {-1,-1,-1}, {1,1,1});
+        }
+    }
 }
 
 function vector fbm(int octave;
@@ -110,7 +131,7 @@ function vector fbm(int octave;
 
         rotate(mat, 0.1, {0,1,0});
 
-        pos = mat * pos * (scale) + shift;
+        pos = mat * pos * scale + shift;
         a *= 0.5;
         scale += 0.01;
     }
@@ -131,7 +152,7 @@ function vector domainWarping(vector p; float time) {
         );
 
     if (chi("fbm1_SamplingID") != 0) {
-        fbm1 = sampling(1, fbm1, time);
+        fbm1 = sampling(1, fbm1);
     }
     // return fbm1; //debug
 
@@ -145,7 +166,7 @@ function vector domainWarping(vector p; float time) {
         );
 
     if (chi("fbm2_SamplingID") != 0) {
-        fbm2 = sampling(2, fbm2, time);
+        fbm2 = sampling(2, fbm2);
     }
 
     vector fbm3 = fbm(
@@ -158,7 +179,11 @@ function vector domainWarping(vector p; float time) {
         );
 
     if (chi("fbm3_SamplingID") != 0) {
-        fbm3 = sampling(3, fbm3, time);
+        fbm3 = sampling(3, fbm3);
+    }
+
+    if(chi("is_Fit_11")) {
+       fbm3 = fitTo11(chi("fbm3_NoiseID"), chi("fbm3_SamplingID"), fbm3);
     }
 
     return fbm3;
