@@ -46,71 +46,76 @@ function vector fitTo01(int noiseId; vector vec) {
     // -1 ~ 1
     if(OriginalPerlinNoise == noiseId) 
         return fit11(vec, {0,0,0}, {1,1,1});
+    
+    // -1.7 ~ 1.7
+    if(SparseConvolutionNoise == noiseId) 
+        return fit(vec, {-1.7, -1.7, -1.7}, {1.7, 1.7, 1.7}, {0,0,0}, {1,1,1});
 
     // -1 ~ 1.02
     if(CurlNoise == noiseId)
         return fit(vec, {-1, -1, -1}, {1.02, 1.02, 1.02}, {0,0,0}, {1,1,1});
 
-    // -1.7 ~ 1.7
-    if(SparseConvolutionNoise == noiseId) 
-        return fit(vec, {-1.7, -1.7, -1.7}, {1.7, 1.7, 1.7}, {0,0,0}, {1,1,1});
-    
     return vec;// 0 ~ 1
 }
 
-function vector sampling(int fbmId; vector v) {
-    vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
-    int samplingId = chi("fbm" + itoa(fbmId) + "_SamplingID");
-
+function vector sampling(int fbmId; vector v; float time) {
     int None = 0,
         Normal = 1,
         Cauchy = 2,
         Sphere_Uniform = 3,
         Orientation_Uniform = 4;
 
-    if (samplingId == Normal)
-        return sample_normal(vec);
-    
-    if (samplingId == Cauchy)
-        return sample_cauchy(vec);
-    
-    if (samplingId == Sphere_Uniform)
-        return sample_sphere_uniform(vec);
-    
-    if (samplingId == Orientation_Uniform)
-        return sample_orientation_uniform(vec);
+    int samplingId = chi("fbm" + itoa(fbmId) + "_SamplingID");
 
-    return v;
+    if (samplingId == Normal) {
+        vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
+        return sample_normal(vec);
+    }
+    
+    if (samplingId == Cauchy) {
+        vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
+        return sample_cauchy(vec);
+    }
+    
+    if (samplingId == Sphere_Uniform) {
+        vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
+        return sample_sphere_uniform(vec);
+    }
+    
+    if (samplingId == Orientation_Uniform) {
+        vector vec = fitTo01(chi("fbm" + itoa(fbmId) + "_NoiseID"), v);
+        return sample_orientation_uniform(v);
+    }
+
+    error("ERROR: Sampling");
 }
 
 function vector fbm(int octave;
                     int noiseId;
                     vector p;
-                    float sft;
+                    vector sft;
                     float t;
                     float flow) {
     vector pos = p;
     vector v = {0};
     vector a = {0.5, 0.5, 0.5};
     matrix mat = ident();
-    float radius = 0;
+    // float radius = 3.1415;
     float time = t;
-    float shift = sft;
+    float scale = 2;
+    vector shift = sft;
 
     for (int i = 0; i < octave; ++i) {
         v += a * selectedNoise(noiseId, pos, time, flow);
 
-        rotate(mat, radius, normalize(v));
+        rotate(mat, 0.1, {0,1,0});
 
-        pos = mat * pos * shift;
-
-        radius += 0.125;
-        time -= 0.25;
-        shift += 0.25;
+        pos = mat * pos * (scale) + shift;
         a *= 0.5;
+        scale += 0.01;
     }
 
-    return v;
+    return v / (1 - a);
 }
 
 function vector domainWarping(vector p; float time) {
@@ -119,38 +124,42 @@ function vector domainWarping(vector p; float time) {
     vector fbm1 = fbm(
             chi("fbm1_Octave"),
             chi("fbm1_NoiseID"),
-            pos,
-            chf("fbm1_Shift"),
+            pos * chf("fbm1_Scale"),
+            chv("fbm1_Shift"),
             time,
             chf("fbm1_FlowNoise_Flow")
         );
 
+    if (chi("fbm1_SamplingID") != 0) {
+        fbm1 = sampling(1, fbm1, time);
+    }
     // return fbm1; //debug
-
-    fbm1 = sampling(1, fbm1);
 
     vector fbm2 = fbm(
             chi("fbm2_Octave"),
             chi("fbm2_NoiseID"),
-            pos + fbm1,
-            chf("fbm2_Shift"),
+            pos + (fbm1 * chf("fbm2_Scale")),
+            chv("fbm2_Shift"),
             time,
             chf("fbm2_FlowNoise_Flow")
         );
 
-    fbm2 = sampling(2, fbm2);
-
+    if (chi("fbm2_SamplingID") != 0) {
+        fbm2 = sampling(2, fbm2, time);
+    }
 
     vector fbm3 = fbm(
             chi("fbm3_Octave"),
             chi("fbm3_NoiseID"),
-            pos + fbm2,
-            chf("fbm3_Shift"),
+            pos + (fbm2 * chf("fbm3_Scale")),
+            chv("fbm3_Shift"),
             time,
             chf("fbm3_FlowNoise_Flow")
         );
 
-    fbm3 = sampling(3, fbm3);
+    if (chi("fbm3_SamplingID") != 0) {
+        fbm3 = sampling(3, fbm3, time);
+    }
 
     return fbm3;
 }
