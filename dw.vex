@@ -25,7 +25,8 @@ function vector selectedNoise(int noiseId; vector pos; float time; float flow) {
     }
 
     if(OriginalPerlinNoise == noiseId) { // 0 ~ 1
-        error("Error: OriginalPerlinNoise");
+        // error("Error: OriginalPerlinNoise");
+        return onoise(pos);
     }
 
     if(SimplexNoise == noiseId) { // 0 ~ 1
@@ -246,7 +247,21 @@ function vector domainWarping(vector p; float time) {
        fbm3 = fitTo11(chi("fbm3_NoiseID"), chi("fbm3_SamplingID"), fbm3);
     }
 
-    // fbm3 = fbm3 % 0.3;
-
     return fbm3;
+}
+
+vector v = domainWarping(v@P, chf("Time"));
+
+// setattrib(
+//     geoself(),
+//     chs("class"), chs("AttributeName"), @elemnum, @vtxnum, v
+// );
+
+string mode = chs("mode");
+
+foreach (string attribName; split(chs("AttributeName"))){
+    setattrib(
+      geoself(),
+      chs("class"), attribName, @elemnum, @vtxnum, v, mode
+    );  
 }
